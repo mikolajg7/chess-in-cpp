@@ -52,7 +52,6 @@ int main()
         if (!game.checkGameOver()) // Jeśli gra się nie skończyła
         {
             game.playerMove(); // Wykonaj ruch gracza
-            game.printMoves(); // Wyświetl ruchy
             if (game.checkGameOver()) // Sprawdź, czy gra się skończyła
             {
                 std::cout << game.getWinner() << std::endl; // Wyświetl zwycięzcę

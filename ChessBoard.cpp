@@ -61,45 +61,51 @@ void ChessBoard::flipTurn() {
 }
 
 bool ChessBoard::isCheck(Turn t) {
-    Pos kingPos; // Pozycja króla
-    bool kingFound = false; // Flaga, czy król został znaleziony
-    std::map<Pos, Piece>& pieces = (t == Turn::white) ? white_pieces : black_pieces; // Wybór odpowiednich figur
-    for (const auto& piece : pieces) {
-        if (piece.second == Piece::king) { // Szukanie króla
+    Pos kingPos;
+    bool kingFound = false;
+    std::map<Pos, Piece> &pieces = (t == Turn::white) ? white_pieces : black_pieces;
+    for (const auto &piece : pieces) {
+        if (piece.second == Piece::king) {
             kingPos = piece.first;
             kingFound = true;
             break;
         }
     }
-    if (!kingFound) return false; // Jeśli król nie został znaleziony, nie ma szacha
+    std::map<Pos, Piece> &opponent = (t == Turn::white) ? black_pieces : white_pieces;
+    for (const auto &piece : opponent) {
+        std::vector<Pos> moves = possibleMoves(piece.first);
 
-    std::map<Pos, Piece>& opponent = (t == Turn::white) ? black_pieces : white_pieces; // Wybór figur przeciwnika
-    for (const auto& piece : opponent) {
-        std::vector<Pos> moves = possibleMoves(piece.first); // Pobranie możliwych ruchów przeciwnika
-
-        // Sprawdzenie, czy którykolwiek z ruchów może zaatakować pozycję króla
+        // Check if any of the moves can attack the king's position
         if (std::find(moves.begin(), moves.end(), kingPos) != moves.end()) {
-            return true; // Jeśli tak, jest szach
+            return true;
         }
     }
-    return false; // W przeciwnym razie nie ma szacha
+    return false;
 }
 
 bool ChessBoard::isCheckmate() {
-    if (!isCheck(turn)) return false; // Jeśli król nie jest w szachu, to nie jest mat
+    // First, check if the current player's king is in check
+    if (!isCheck(turn)) {
+        return false;  // If the king is not in check, it's not checkmate
+    }
 
-    // Sprawdzenie, czy gracz ma jakiekolwiek legalne ruchy
-    for (const auto& piece : moverPieces()) {
+    // Check if the current player has any legal moves left
+    for (const auto &piece : moverPieces()) {
         std::vector<Pos> moves = possibleMoves(piece.first);
-        for (const auto& move : moves) {
+        for (const auto &move : moves) {
+            // Create a temporary board to simulate the move
             ChessBoard tempBoard = *this;
-            if (tempBoard.makeMove(piece.first, move)) {
-                return false; // Jeśli istnieje legalny ruch, to nie jest mat
+            tempBoard.makeMove(piece.first, move);  // Avoid recursive checkmate call
+
+            // If the move does not leave the king in check, it's not checkmate
+            if (!tempBoard.isCheck(turn)) {
+                return false;
             }
         }
     }
 
-    return true; // Jeśli król jest w szachu i nie ma legalnych ruchów, to jest mat
+    // If the king is in check and no legal moves are available, it's checkmate
+    return true;
 }
 
 bool ChessBoard::makeMove(Pos from, Pos to) {
@@ -123,6 +129,7 @@ bool ChessBoard::makeMove(Pos from, Pos to) {
         (moverPieces()[to] == Piece::black_pawn && to.y == 1)) {
         moverPieces()[to] = Piece::queen;
     }
+
 
     flipTurn(); // Zmiana tury
 
@@ -294,11 +301,11 @@ bool ChessBoard::parseMove(std::string move, Pos& from, Pos& to) {
 bool ChessBoard::print() {
     std::string move;
     illegalmove:
-    std::cout << "Enter move (e.g. e2e4): ";
+    std::cout << "Enter move : ";
     std::cin >> move;
     Pos from(-1, -1), to(-1, -1);
     if (!parseMove(move, from, to) || !makeMove(from, to)) {
-        std::cout << "* Illegal move" << std::endl;
+        std::cout << "WRONG! ILLEGAL MOVE" << std::endl;
         move = "";
         goto illegalmove; // Powtarzanie pytania o ruch jeśli ruch jest nielegalny
     }
@@ -353,13 +360,20 @@ void ChessBoard::AIMove() {
     }
     bool minimize = (turn == Turn::black);
     Move m = minimax(1, minimize); // Zwiększ głębokość dla lepszych decyzji AI
-    makeMove(m.from, m.to);
+    if (!makeMove(m.from, m.to)) {
+        gameOver = true;
+        return;
+    }
+    else{
+        makeMove(m.from, m.to);
+    }
+    printMoves(); // Wyświetlenie historii ruchów
 }
 
 void ChessBoard::playerMove() {
     if (turn == Turn::white) {
-        if (!print()) {
-            playerMove(); // Ponowne pytanie o ruch jeśli ruch jest nielegalny
+        if (!print()) {// Ustawienie gameOver jeśli gracz podał nielegalny ruch
+            return;
         }
     } else {
         AIMove();
