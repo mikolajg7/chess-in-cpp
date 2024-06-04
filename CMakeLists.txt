@@ -12,7 +12,6 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
 # Add the executable
 add_executable(chess
-        ch.cpp
         ChessBoard.h
         main.cpp
         ChessBoard.cpp)
